@@ -1,7 +1,7 @@
 {
   "name": "sixm",
   "version": "0.1.0",
-  "description": "SixM - a Lua-scripted multiplayer framework and dedicated server.",
+  "description": "SixM - open-source multiplayer framework for GTA VI (GTA 6): Lua-scripted dedicated server, resources and client. Pre-alpha.",
   "type": "module",
   "license": "MIT",
   "private": true,
@@ -25,5 +25,23 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "postject": "^1.0.0-alpha.6"
-  }
+  },
+  "keywords": [
+    "gta6",
+    "gta-vi",
+    "gta 6 multiplayer",
+    "multiplayer",
+    "game-server",
+    "dedicated-server",
+    "lua",
+    "roleplay",
+    "modding",
+    "sixm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodingRule/SixM.git"
+  },
+  "homepage": "https://github.com/CodingRule/SixM#readme",
+  "bugs": "https://github.com/CodingRule/SixM/issues"
 }

@@ -16,6 +16,12 @@ These are not negotiable, because the project depends on them:
    roadmap.
 4. Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## If your contribution involves the game
+
+Read [docs/game-integration.md](docs/game-integration.md). In short: never post game files, memory dumps, keys, or
+instructions for obtaining or decrypting the game, and work only from a copy you own. Issues and pull requests that
+break this are removed.
+
 ## Getting set up
 
 You need Node.js 22 or newer.

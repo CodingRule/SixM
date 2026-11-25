@@ -2,9 +2,12 @@
   <img src="assets/banner.svg" alt="SixM — Lua-scripted multiplayer, built for the next generation." width="100%">
 </p>
 
+<h1 align="center">SixM: GTA VI multiplayer framework</h1>
+
 <p align="center">
-  <b>A Lua-scripted multiplayer framework: a dedicated server and a client, with gameplay written as resources.</b><br>
-  What FiveM is to GTA V, SixM aims to be for GTA VI.
+  <b>An open-source multiplayer framework for GTA VI (GTA 6): a dedicated server, a Lua resource system and a client,
+  with gameplay written as scripts.</b><br>
+  What FiveM is to GTA V, SixM aims to be for GTA VI. In development: there is no in-game client yet.
 </p>
 
 <p align="center">
@@ -22,6 +25,8 @@
   <a href="docs/scripting.md">Lua API</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#roadmap">Roadmap</a> ·
+  <a href="#help-wanted">Help wanted</a> ·
+  <a href="#faq">FAQ</a> ·
   <a href="#legal">Legal</a>
 </p>
 
@@ -31,8 +36,10 @@
 > - SixM does **not** launch, modify or contain GTA VI. You cannot play GTA VI multiplayer with it today.
 > - What exists is the dedicated server, the Lua resource system, and a **headless client** (no graphics) used for
 >   testing and bots.
-> - The planned game integration targets the open-source Leonida recompilation runtime, which does not boot the game
->   yet. In-game multiplayer is blocked on that. It is a roadmap item, not a feature.
+> - The planned game integration targets the open-source Leonida runtime
+>   ([Leonida Continued](https://github.com/ubiquitarianism/leonida)), which boots the game's menus from your own copy
+>   but has nothing playable yet. In-game multiplayer is blocked on that. It is a roadmap item, not a feature.
+> - **Own the Xbox Series copy of the game? [You can help.](#help-wanted)**
 > - No game files, keys or assets are in this repository, and none ever will be.
 
 ## What works today
@@ -47,7 +54,7 @@
 | ✅ | Scripting | Threads, local and net events (both directions), commands, exports, convars, JSON |
 | ✅ | Headless client | Connects, runs client Lua, can simulate movement. For tests and bots |
 | ✅ | Standalone executables | `sixm-server.exe` and `sixm-client.exe` for Windows via `npm run build:exe` |
-| 🚧 | In-game client | Planned on top of the Leonida runtime. Blocked upstream: that runtime does not boot the game yet |
+| 🚧 | In-game client | Planned on top of the Leonida runtime. Blocked upstream: that runtime has no playable game world yet |
 | ❌ | Game-world natives | No peds, vehicles, weapons or world natives. There is no game attached to script against |
 | ❌ | UDP transport | Transport is WebSocket over TCP for now |
 | ❌ | Entity ownership, vehicles, state bags | Only player state is synced |
@@ -293,7 +300,7 @@ on them has nothing to call into.
 ## Roadmap
 
 - [x] Dedicated server, resource system, net events, headless client
-- [ ] In-game client through a Leonida runtime hook (**blocked upstream**: the runtime does not boot the game yet)
+- [ ] In-game client through a Leonida runtime hook (**blocked upstream**: no playable game world yet). See [docs/game-integration.md](docs/game-integration.md)
 - [ ] UDP transport
 - [ ] Entity ownership and vehicles
 - [ ] Server-authoritative validation
@@ -304,6 +311,57 @@ on them has nothing to call into.
 - [ ] Web admin panel
 
 No dates. Items land when they work.
+
+## Help wanted
+
+SixM needs two kinds of people.
+
+**Anyone who writes code.** Networking, scripting and hosting work needs no game at all. Start with the issues
+labelled [`good first issue`](https://github.com/CodingRule/SixM/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+or [`help wanted`](https://github.com/CodingRule/SixM/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
+
+**Anyone who owns the Xbox Series copy of GTA VI.** The in-game client cannot be built without people who can run
+the game through Leonida and report what happens. See the issues labelled
+[`needs-game-copy`](https://github.com/CodingRule/SixM/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-game-copy) and
+read [docs/game-integration.md](docs/game-integration.md) first. Never post game files, keys or instructions for
+obtaining them.
+
+## FAQ
+
+### Can I play GTA 6 multiplayer with SixM today?
+
+No. SixM has a working server and a text-only test client, but no client inside the game. Nobody can play GTA VI
+multiplayer through SixM yet.
+
+### Is SixM "FiveM for GTA 6"?
+
+That is the goal: custom multiplayer servers for GTA VI with gameplay written in Lua, the way FiveM does it for
+GTA V. SixM is a separate project with its own code. It is not made by, or affiliated with, Cfx.re or Rockstar Games.
+
+### When will GTA 6 multiplayer mods work?
+
+There is no date. It depends on GTA VI running on PC with a playable world. Today the only route is the community
+project Leonida, which boots the game's menus from your own Xbox Series copy and is not playable yet.
+
+### Is there a GTA 6 roleplay (RP) server I can join?
+
+Not on SixM. You can host a SixM server now and write the Lua resources for one, but players can only connect with
+the headless client.
+
+### Do I need to own GTA VI?
+
+Not to run the server, write resources or contribute to the networking and scripting code. Any future in-game client
+will require your own copy of the game. SixM will never ship game files.
+
+### Will my FiveM resources work?
+
+Not unmodified. The event, thread and command functions have the same names, so plain Lua logic ports easily.
+Anything that calls game natives, NUI or a framework built on them has nothing to call yet.
+
+### How do I host a SixM server?
+
+Download the [latest release](https://github.com/CodingRule/SixM/releases), run `sixm-server.exe`, and read
+[docs/hosting.md](docs/hosting.md).
 
 ## Project layout
 
@@ -330,6 +388,7 @@ SixM/
 - [Resources and manifests](docs/resources.md)
 - [Configuration (`server.cfg`)](docs/configuration.md)
 - [Hosting a server](docs/hosting.md)
+- [GTA VI integration: status and how to help](docs/game-integration.md)
 - [Wire protocol](docs/protocol.md)
 - [Architecture](docs/architecture.md)
 
