@@ -1156,7 +1156,7 @@ fn player_connecting_synchronous_reject() {
 fn player_connecting_deferral_can_reject_accept_time_out_or_be_abandoned() {
     run(async {
         let (server, port) = start(ServerOptions {
-            defer_timeout_ms: 80,
+            defer_timeout_ms: 400,
             ..options()
         })
         .await;
@@ -1175,7 +1175,8 @@ fn player_connecting_deferral_can_reject_accept_time_out_or_be_abandoned() {
                 _ => return ConnectDecision::Defer(decision), // the sender is dropped right here
             };
             tokio::task::spawn_local(async move {
-                sleep(ms(30)).await;
+                // Long enough that the frame sent while pending is read before the verdict, even on a slow machine.
+                sleep(ms(150)).await;
                 let _ = answer.send(verdict);
             });
             ConnectDecision::Defer(decision)
