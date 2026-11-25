@@ -94,6 +94,7 @@ Headless client flags:
 | `--name <name>` | Player name |
 | `--pos <x,y,z>` | Starting position |
 | `--wander` | Walk around randomly, so there is movement to sync |
+| `--secure` | Connect with TLS, for servers behind a TLS reverse proxy |
 
 Both the server and the client read commands from their terminal. In the server console try `help`, `status`,
 `players` or `say hello`; in the client try `say hello`, `hello`, `near`, `/pos 10 20 0` or `/list`. Those come from
@@ -328,6 +329,7 @@ SixM/
 - [Lua scripting API](docs/scripting.md)
 - [Resources and manifests](docs/resources.md)
 - [Configuration (`server.cfg`)](docs/configuration.md)
+- [Hosting a server](docs/hosting.md)
 - [Wire protocol](docs/protocol.md)
 - [Architecture](docs/architecture.md)
 

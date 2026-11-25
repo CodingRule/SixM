@@ -19,9 +19,10 @@ export class SixMClient extends EventEmitter {
    * @param {string} [o.host] @param {number} [o.port] @param {string} [o.name]
    * @param {string} [o.build]
    * @param {(line:string)=>void} [o.print] where script output and notices go
+   * @param {boolean} [o.secure] connect with TLS (wss://), for servers behind a TLS reverse proxy
    * @param {boolean} [o.runScripts] run the server's client-side Lua (default true)
    */
-  constructor({ host = '127.0.0.1', port = DEFAULT_PORT, name = 'Player', build = 'sixm-client', print = console.log, runScripts = true } = {}) {
+  constructor({ host = '127.0.0.1', port = DEFAULT_PORT, name = 'Player', build = 'sixm-client', print = console.log, runScripts = true, secure = false } = {}) {
     super();
     this.host = host;
     this.port = port;
@@ -29,6 +30,7 @@ export class SixMClient extends EventEmitter {
     this.build = build;
     this.print = print;
     this.runScripts = runScripts;
+    this.secure = !!secure;
 
     this.id = 0;
     this.connected = false;
@@ -58,7 +60,7 @@ export class SixMClient extends EventEmitter {
         settled = true;
         reject(err instanceof Error ? err : new Error(String(err)));
       };
-      const ws = new WebSocket(`ws://${this.host}:${this.port}/ws`, { maxPayload: 4 * 1024 * 1024 });
+      const ws = new WebSocket(`${this.secure ? 'wss' : 'ws'}://${this.host}:${this.port}/ws`, { maxPayload: 4 * 1024 * 1024 });
       this.ws = ws;
       ws.binaryType = 'nodebuffer';
 

@@ -16,6 +16,7 @@ Usage: sixm-client [options]
   -n, --name <name>      player name               (default: Player)
       --pos <x,y,z>      starting position         (default: 0,0,0)
       --wander           walk around at random
+      --secure           connect with TLS (for servers behind a TLS reverse proxy)
   -v, --version          print the version
   -h, --help             print this help
 
@@ -38,6 +39,7 @@ export async function main(argv = process.argv.slice(2)) {
         name: { type: 'string', short: 'n' },
         pos: { type: 'string' },
         wander: { type: 'boolean' },
+        secure: { type: 'boolean' },
         version: { type: 'boolean', short: 'v' },
         help: { type: 'boolean', short: 'h' },
       },
@@ -53,6 +55,7 @@ export async function main(argv = process.argv.slice(2)) {
     host: args.host ?? '127.0.0.1',
     port: args.port ? Number(args.port) : DEFAULT_PORT,
     name: args.name ?? 'Player',
+    secure: !!args.secure,
     build: `sixm-client/${VERSION}`,
   });
   const say = (line) => console.log(line);
