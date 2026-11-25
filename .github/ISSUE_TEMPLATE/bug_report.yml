@@ -1,0 +1,87 @@
+name: Bug report
+description: Something in SixM does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. SixM is pre-alpha and has **no in-game client**: please check the README's
+        "What works today" table before filing. For security problems, do **not** use this form; see SECURITY.md.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Server
+        - Headless client
+        - Lua scripting API
+        - Resources / manifest
+        - server.cfg
+        - HTTP endpoints
+        - Protocol
+        - Standalone executables (build:exe)
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, and what did SixM do?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest resource, server.cfg and commands that show the problem.
+      placeholder: |
+        1. server.cfg contains ...
+        2. npm start
+        3. npm run client -- --name Alice
+        4. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Server and client output. Remove IP addresses and tokens first.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: SixM version or commit
+      placeholder: v0.1.0 or a commit hash
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: Output of `node --version`. Write "exe" if you are using the standalone executables.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11, Ubuntu 24.04, ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This report contains no game files, keys or other game content.
+          required: true

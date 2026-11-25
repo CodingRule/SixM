@@ -1,0 +1,59 @@
+name: Feature request
+description: Suggest an addition or change to SixM
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check the roadmap in the README first. The in-game client is already planned and is blocked upstream,
+        so there is no need to request it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe what you are trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should SixM do? For API additions, sketch the Lua functions or config directives.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, including doing it in a resource with the current API.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Server core
+        - Networking / protocol
+        - Lua scripting API
+        - Resources / manifest
+        - Configuration
+        - Headless client
+        - Tooling / build
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to work on this myself.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and the roadmap.
+          required: true
+        - label: This request does not involve distributing game files or other game content.
+          required: true

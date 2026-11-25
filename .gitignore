@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+# Third-party checkout kept locally for reference; not part of SixM
+/Leonida/
+/cache/

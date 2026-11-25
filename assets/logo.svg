@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="t">
+  <title id="t">SixM</title>
+  <defs>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="16" y1="8" x2="112" y2="120">
+      <stop offset="0" stop-color="#e0218a"/>
+      <stop offset="0.55" stop-color="#ff5a4d"/>
+      <stop offset="1" stop-color="#ff9a1f"/>
+    </linearGradient>
+  </defs>
+  <!-- hexagon: six sides, six links -->
+  <path d="M64 10 111 37v54L64 118 17 91V37z" fill="none" stroke="url(#g)" stroke-width="7" stroke-linejoin="round"/>
+  <!-- the six: a stem that lands in a ring -->
+  <path d="M80 35C59 40 46 56 46 77" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="64" cy="77" r="18" fill="none" stroke="url(#g)" stroke-width="10"/>
+  <!-- network nodes on alternating corners -->
+  <g fill="url(#g)">
+    <circle cx="64" cy="10" r="8"/>
+    <circle cx="111" cy="91" r="8"/>
+    <circle cx="17" cy="91" r="8"/>
+  </g>
+</svg>

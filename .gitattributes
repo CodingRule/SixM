@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+# Text
+*.svg text
+*.lua text
+*.cfg text
+*.js text
+*.mjs text
+*.json text
+*.md text
+*.yml text
+
+# Windows scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary

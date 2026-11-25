@@ -1,0 +1,29 @@
+{
+  "name": "sixm",
+  "version": "0.1.0",
+  "description": "SixM - a Lua-scripted multiplayer framework and dedicated server.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "sixm-server": "bin/sixm-server.js",
+    "sixm-client": "bin/sixm-client.js"
+  },
+  "scripts": {
+    "start": "node bin/sixm-server.js",
+    "client": "node bin/sixm-client.js",
+    "test": "node --test \"test/*.test.js\"",
+    "build:exe": "node scripts/build-exe.mjs"
+  },
+  "dependencies": {
+    "fengari": "^0.1.4",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6"
+  }
+}
