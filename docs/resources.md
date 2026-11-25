@@ -1,6 +1,6 @@
 # Resources and manifests
 
-A **resource** is a folder of Lua scripts that the server loads as a unit. Gameplay, chat, admin tools: everything
+A **resource** is a folder of Lua 5.4 scripts that the server loads as a unit. Gameplay, chat, admin tools: everything
 beyond the core is a resource.
 
 ## Layout
@@ -15,11 +15,17 @@ resources/
     client.lua
 ```
 
-The manifest file is always named `manifest.lua`.
+The manifest file is always named `manifest.lua`. The resource's name is the name of its folder; that is the name
+`ensure` and `exports.<name>` use.
+
+Folders whose name is in square brackets, such as `resources/[core]/`, are categories: the server looks inside them
+for resources (up to four levels deep) and the bracketed name is not part of any resource name. If two folders hold
+a resource with the same name, the first one found is kept and a warning is logged.
 
 ## manifest.lua
 
-The manifest is a Lua file made of simple directive calls.
+The manifest is a Lua file made of simple directive calls. It is run in an empty Lua state that has only these
+directives (no standard library), so a manifest can describe its resource and nothing else.
 
 ```lua
 name 'hello'
@@ -35,10 +41,13 @@ client_script 'client.lua'
 
 | Directive | Example | Meaning |
 |---|---|---|
-| `name` | `name 'hello'` | Resource name |
+| `name` | `name 'hello'` | Display name. The folder name is what identifies the resource |
 | `description` | `description 'Greets players'` | One-line description |
 | `author` | `author 'you'` | Author |
 | `version` | `version '1.0.0'` | Version string |
+
+`url` and `sixm_version` are accepted as metadata strings too. Metadata is informational: the server reads it and
+does not act on it.
 
 ### Scripts
 
@@ -49,8 +58,15 @@ client_script 'client.lua'
 | `client_script` | `client_script 'client.lua'` | Client |
 | `client_scripts` | `client_scripts { 'hud.lua', 'client.lua' }` | Client |
 | `shared_script` | `shared_script 'config.lua'` | Server and client |
+| `shared_scripts` | `shared_scripts { 'config.lua', 'util.lua' }` | Server and client |
 
-Paths are relative to the resource folder.
+Paths are relative to the resource folder and must stay inside it: absolute paths and paths containing `..` are
+refused. On each side the shared scripts run first, then that side's scripts, each group in the order listed. All
+scripts of one resource on one side share the same globals. If a listed file is missing, the resource does not
+start.
+
+`dependency 'chat'` and `dependencies { ... }` are accepted so a manifest can record what it needs, but the server
+does not check or order anything by them yet. Use the `ensure` order in `server.cfg`.
 
 A resource with several files:
 
@@ -93,10 +109,14 @@ If one resource uses another's [exports](scripting.md#exports), `ensure` the pro
 
 ## Lifecycle
 
-- `onResourceStart (resourceName)` fires when a resource starts.
-- `onResourceStop (resourceName)` fires when a resource stops.
+On the server:
 
-Both fire for every resource, so compare against `GetCurrentResourceName()`:
+- `onResourceStart (resourceName)` fires when a resource has started.
+- `onResourceStop (resourceName)` fires when a resource is about to stop.
+
+On the client, `onClientResourceStart (resourceName)` fires when a resource's client scripts have been loaded.
+
+These fire in every running resource, so compare against `GetCurrentResourceName()`:
 
 ```lua
 AddEventHandler('onResourceStart', function(resourceName)
@@ -118,7 +138,11 @@ end)
 - Call game natives. SixM is not attached to a game yet.
 - Draw UI. There is no UI layer.
 - Touch the filesystem, run processes or load native code. See the [sandbox](scripting.md#sandbox).
-- Be hot-reloaded. Restart the server to pick up changes (hot-reload is on the roadmap).
+- Share Lua values with another resource directly. Each resource has its own Lua state; events and exports copy
+  their arguments. See [Values that cross a boundary](scripting.md#values-that-cross-a-boundary).
+- Be hot-reloaded automatically. The console command `restart <resource>` rereads a resource from disk and restarts
+  its server scripts, but clients that are already connected keep the client scripts they received when they
+  joined. Automatic hot-reload is on the roadmap.
 
 ## Conventions
 

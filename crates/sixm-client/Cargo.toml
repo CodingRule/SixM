@@ -1,0 +1,16 @@
+[package]
+name = "sixm-client"
+description = "SixM headless client: speaks the protocol and runs client-side Lua."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sixm-protocol.workspace = true
+sixm-lua.workspace = true
+serde_json.workspace = true
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+tokio = { version = "1", features = ["rt", "net", "time", "sync", "macros", "signal"] }
+tokio-tungstenite = { version = "0.26", features = ["native-tls"] }

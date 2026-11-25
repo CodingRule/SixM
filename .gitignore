@@ -1,9 +1,11 @@
-node_modules/
-dist/
-build/
+# Rust
+/target/
+/dist/
+
 *.log
 .DS_Store
-# Third-party checkout kept locally for reference; not part of SixM
+
+# Third-party checkouts kept locally for reference; not part of SixM
 /Leonida/
-/cache/
 /LeonidaContinued/
+/cache/

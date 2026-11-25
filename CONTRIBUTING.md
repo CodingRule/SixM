@@ -24,7 +24,12 @@ break this are removed.
 
 ## Getting set up
 
-You need Node.js 22 or newer.
+You need:
+
+- a [Rust toolchain](https://rustup.rs), 1.80 or newer, with `rustfmt` and `clippy`;
+- a C compiler, because the Lua 5.4 interpreter is compiled from source during the build: the MSVC Build Tools on
+  Windows, gcc or clang on Linux;
+- on Linux, the OpenSSL development headers (`libssl-dev`) and `pkg-config`, for the client's TLS support.
 
 ```powershell
 git clone https://github.com/CodingRule/SixM
@@ -35,40 +40,63 @@ cd SixM
 ```
 
 ```powershell
-npm install
-```
-
-```powershell
-npm test
+cargo test --workspace
 ```
 
 Run a server and a headless client to try things by hand:
 
 ```powershell
-npm start
+cargo run --release -p sixm-server
 ```
 
 ```powershell
-npm run client -- --name Alice --wander
+cargo run --release -p sixm-client -- --name Alice --wander
 ```
+
+## Where things are
+
+| Crate | Contents |
+|---|---|
+| `crates/sixm-protocol` | Wire protocol (`src/lib.rs`) and command-line splitting (`src/command.rs`) |
+| `crates/sixm-lua` | Sandboxed Lua 5.4 runtime: `src/lib.rs`, the scheduler and script API in `src/bootstrap.lua`, the JSON bridge in `src/json.rs` |
+| `crates/sixm-server` | Dedicated server: `core.rs` (networking, sync, HTTP), `config.rs`, `manifest.rs`, `resources.rs` (resource manager and server natives), `app.rs` (startup and console commands), `main.rs` (CLI) |
+| `crates/sixm-client` | Headless client: `lib.rs` (connection and client natives), `main.rs` (CLI) |
 
 ## Making a change
 
 1. For anything larger than a small fix, open an issue first so the approach can be agreed before you write code.
 2. Create a branch from `main`.
 3. Keep the change focused: one topic per pull request.
-4. Add or update tests in `test/` for behaviour you change. `npm test` must pass.
+4. Add or update tests for behaviour you change: unit tests next to the code, or integration tests in the crate's
+   `tests/` folder. `cargo test --workspace` must pass.
 5. Update the docs in `docs/` and the README when behaviour, API or configuration changes. If you change
-   `src/shared/protocol.js`, update `docs/protocol.md` in the same pull request.
+   `crates/sixm-protocol/src/lib.rs`, update `docs/protocol.md` in the same pull request. If you add, remove or
+   change a Lua function, update `docs/scripting.md`.
 6. Open the pull request and fill in the template.
 
-CI runs `npm test` on Linux and Windows with Node 22 and 24.
+CI checks formatting and lints on Linux, then runs the tests on Linux and Windows with the stable toolchain. Run the
+same checks locally before you push:
+
+```powershell
+cargo fmt --all --check
+```
+
+```powershell
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
+```powershell
+cargo test --workspace
+```
 
 ## Code style
 
-- ES modules, Node 22+ APIs. No transpilation step.
-- Keep dependencies minimal. A new runtime dependency needs a reason in the pull request description.
-- Formatting follows `.editorconfig`: two-space indentation, LF line endings, UTF-8.
+- Rust 2021, formatted with `rustfmt`, free of `clippy` warnings. The minimum supported Rust version is 1.80.
+- The server and client are single-threaded (a tokio current-thread runtime). Shared state uses `Rc`, `Cell` and
+  `RefCell`; do not hold a `RefCell` borrow across a call into Lua or an `.await`.
+- Keep dependencies minimal. A new dependency needs a reason in the pull request description.
+- `unsafe` needs a `SAFETY` comment explaining why it is sound.
+- Lua, Markdown and configuration files follow `.editorconfig`: two-space indentation, LF line endings, UTF-8.
 - Treat everything that arrives from the network as hostile: validate lengths, types and ranges.
 - Do not widen the Lua sandbox (no `io`, `os.execute`, filesystem or native loading) without a design discussion in
   an issue first.
@@ -80,8 +108,8 @@ reviewer. Reference issues with `#123` where relevant.
 
 ## Reporting bugs
 
-Use the bug report template. Include the SixM version or commit, your OS and Node version, what you did, what you
-expected and what happened. Logs help.
+Use the bug report template. Include the SixM version or commit, your OS, whether you run a release build or built
+from source (and then your `rustc --version`), what you did, what you expected and what happened. Logs help.
 
 ## Security issues
 

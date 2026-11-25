@@ -1,0 +1,78 @@
+name: Release
+
+# Pushing a tag like v0.2.0 builds the executables for Windows and Linux and
+# attaches them to a GitHub release for that tag.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, name: windows-x64, exe: ".exe" }
+          - { os: ubuntu-latest, name: linux-x64, exe: "" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Build
+        run: cargo build --release --locked -p sixm-server -p sixm-client
+      - name: Package
+        shell: bash
+        run: |
+          dir="sixm-${GITHUB_REF_NAME#v}"
+          mkdir -p "stage/$dir"
+          cp "target/release/sixm-server${{ matrix.exe }}" "target/release/sixm-client${{ matrix.exe }}" "stage/$dir/"
+          cp server.cfg LICENSE "stage/$dir/"
+          cp -r resources "stage/$dir/"
+          cd stage
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a -tzip "../$dir-${{ matrix.name }}.zip" "$dir" > /dev/null
+          else
+            tar -czf "../$dir-${{ matrix.name }}.tar.gz" "$dir"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            sixm-*.zip
+            sixm-*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Checksums
+        run: cd artifacts && sha256sum sixm-* > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+          gh release create "$GITHUB_REF_NAME" artifacts/* --title "SixM ${GITHUB_REF_NAME} (pre-alpha)" --prerelease "$@"

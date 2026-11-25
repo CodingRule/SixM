@@ -12,7 +12,8 @@
 
 ## Checklist
 
-- [ ] `npm test` passes locally
+- [ ] `cargo test --workspace` passes locally
+- [ ] `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings` are clean
 - [ ] Tests added or updated for changed behaviour
 - [ ] Docs updated (`README.md`, `docs/`) if behaviour, API, configuration or the protocol changed
 - [ ] The docs describe only what works after this change

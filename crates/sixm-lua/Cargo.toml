@@ -1,0 +1,12 @@
+[package]
+name = "sixm-lua"
+description = "Sandboxed Lua 5.4 runtime for SixM resources: threads, events, commands, exports."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mlua = { version = "0.11", features = ["lua54", "vendored", "serialize"] }
+serde_json.workspace = true

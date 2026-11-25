@@ -4,8 +4,8 @@
 *.svg text
 *.lua text
 *.cfg text
-*.js text
-*.mjs text
+*.rs text
+*.toml text
 *.json text
 *.md text
 *.yml text

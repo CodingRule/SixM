@@ -14,8 +14,8 @@
   <a href="https://github.com/CodingRule/SixM/actions/workflows/ci.yml"><img src="https://github.com/CodingRule/SixM/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/status-pre--alpha-orange" alt="Status: pre-alpha">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/node-%E2%89%A5%2022-339933?logo=nodedotjs&logoColor=white" alt="Node 22 or newer">
-  <img src="https://img.shields.io/badge/Lua-5.3-2C2D72?logo=lua&logoColor=white" alt="Lua 5.3">
+  <img src="https://img.shields.io/badge/rust-1.80%2B-DEA584?logo=rust&logoColor=white" alt="Rust 1.80 or newer">
+  <img src="https://img.shields.io/badge/Lua-5.4-2C2D72?logo=lua&logoColor=white" alt="Lua 5.4">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" alt="Platform: Windows and Linux">
 </p>
 
@@ -31,7 +31,7 @@
 </p>
 
 > [!IMPORTANT]
-> **SixM is pre-alpha (v0.1.0) and there is no in-game client yet.**
+> **SixM is pre-alpha (v0.2.0) and there is no in-game client yet.**
 >
 > - SixM does **not** launch, modify or contain GTA VI. You cannot play GTA VI multiplayer with it today.
 > - What exists is the dedicated server, the Lua resource system, and a **headless client** (no graphics) used for
@@ -51,9 +51,10 @@
 | ✅ | HTTP endpoints | `/info.json`, `/players.json`, `/dynamic.json` and a status page at `/`, on the game port |
 | ✅ | Configuration | `server.cfg` with `ensure`, convars and endpoint settings |
 | ✅ | Resource system | Server-side and client-side Lua scripts, declared in a `manifest.lua` |
-| ✅ | Scripting | Threads, local and net events (both directions), commands, exports, convars, JSON |
+| ✅ | Scripting | Lua 5.4. Threads, local and net events (both directions), commands, exports, convars, JSON |
+| ✅ | Script watchdog | A script that runs too long without yielding is stopped and the error is logged; the server keeps running |
 | ✅ | Headless client | Connects, runs client Lua, can simulate movement. For tests and bots |
-| ✅ | Standalone executables | `sixm-server.exe` and `sixm-client.exe` for Windows via `npm run build:exe` |
+| ✅ | Standalone executables | Native `sixm-server` and `sixm-client` binaries for Windows and Linux (about 2 MB each on Windows). The Linux build is built in CI and has not been run on a real host yet |
 | 🚧 | In-game client | Planned on top of the Leonida runtime. Blocked upstream: that runtime has no playable game world yet |
 | ❌ | Game-world natives | No peds, vehicles, weapons or world natives. There is no game attached to script against |
 | ❌ | UDP transport | Transport is WebSocket over TCP for now |
@@ -63,7 +64,34 @@
 
 ## Quick start
 
-You need [Node.js](https://nodejs.org) 22 or newer.
+SixM is written in Rust. You can download a release or build it yourself.
+
+### Option 1: download a release
+
+Get the archive for your system from the [releases page](https://github.com/CodingRule/SixM/releases):
+`sixm-<version>-windows-x64.zip` or `sixm-<version>-linux-x64.tar.gz`. Each one holds `sixm-server`, `sixm-client`,
+`server.cfg`, `LICENSE` and the `resources/` folder. Unpack it, open a terminal in the unpacked folder and start the
+server:
+
+```powershell
+.\sixm-server.exe
+```
+
+In a second terminal, connect a headless client:
+
+```powershell
+.\sixm-client.exe --name Alice
+```
+
+On Linux the commands are `./sixm-server` and `./sixm-client --name Alice`. The executables are not code-signed, so
+Windows SmartScreen may warn the first time.
+
+### Option 2: build from source
+
+You need a [Rust toolchain](https://rustup.rs) (1.80 or newer) and a C compiler, because the Lua interpreter is
+compiled from source as part of the build: the MSVC Build Tools on Windows, gcc or clang on Linux. On Linux the
+client's TLS support also needs the OpenSSL development headers (`libssl-dev`) and `pkg-config`. No system Lua is
+needed.
 
 ```powershell
 git clone https://github.com/CodingRule/SixM
@@ -73,54 +101,55 @@ git clone https://github.com/CodingRule/SixM
 cd SixM
 ```
 
-```powershell
-npm install
-```
-
-Start the server. It listens on port `30120` (TCP) for both HTTP and WebSocket traffic:
+Start the server:
 
 ```powershell
-npm start
+cargo run --release -p sixm-server
 ```
 
 In a second terminal, connect a headless client:
 
 ```powershell
-npm run client -- --name Alice
+cargo run --release -p sixm-client -- --name Alice
 ```
 
-Open <http://localhost:30120/> for the status page, or <http://localhost:30120/players.json> to see Alice in the
-player list.
+### Try it
+
+The server listens on port `30120` (TCP) for both HTTP and WebSocket traffic. Open <http://localhost:30120/> for the
+status page, or <http://localhost:30120/players.json> to see Alice in the player list.
 
 Headless client flags:
 
 | Flag | Meaning |
 |---|---|
-| `--host <host>` | Server host to connect to |
-| `--port <port>` | Server port |
-| `--name <name>` | Player name |
-| `--pos <x,y,z>` | Starting position |
-| `--wander` | Walk around randomly, so there is movement to sync |
+| `-H`, `--host <address>` | Server address to connect to (default `127.0.0.1`) |
+| `-p`, `--port <number>` | Server port (default `30120`) |
+| `-n`, `--name <name>` | Player name (default `Player`) |
+| `--pos <x,y,z>` | Starting position (default `0,0,0`) |
+| `--wander` | Walk around at random, so there is movement to sync |
 | `--secure` | Connect with TLS, for servers behind a TLS reverse proxy |
 
 Both the server and the client read commands from their terminal. In the server console try `help`, `status`,
-`players` or `say hello`; in the client try `say hello`, `hello`, `near`, `/pos 10 20 0` or `/list`. Those come from
-the three resources that ship in `resources/`: `chat`, `welcome` and `hello`.
+`players` or `say hello`; in the client try `say hello`, `hello`, `near`, `/pos 10 20 0` or `/list`. `help`, `status`,
+`/pos` and `/list` are built in; the others come from the three resources that ship in `resources/`: `chat`,
+`welcome` and `hello`.
 
 Run the tests:
 
 ```powershell
-npm test
+cargo test --workspace
 ```
 
-Build the standalone Windows executables (`sixm-server.exe`, `sixm-client.exe`, packaged with Node SEA):
+Build optimised executables:
 
 ```powershell
-npm run build:exe
+cargo build --release -p sixm-server -p sixm-client
 ```
 
-The result is in `dist/`: the two executables next to a copy of `server.cfg` and `resources/`. They run without
-Node.js installed. They are not code-signed, so Windows SmartScreen may warn the first time.
+The binaries land in `target/release/`. They run without Rust or Lua installed. The server looks for `server.cfg`
+and `resources/` next to its executable when a `resources` folder is there, and in the working directory otherwise.
+A binary started from the repository root as `target\release\sixm-server.exe` therefore uses the repository's
+`server.cfg` and `resources/`.
 
 ## Your first resource
 
@@ -209,7 +238,7 @@ flowchart LR
     HTTP["HTTP endpoints<br/>/ · /info.json · /players.json · /dynamic.json"]
     CORE["Server core<br/>handshake · slots · tick loop<br/>snapshots · stream culling · rate limits"]
     RM["Resource manager<br/>server.cfg · manifests · events · exports"]
-    subgraph Runtimes["Lua 5.3 runtimes (fengari), one per resource"]
+    subgraph Runtimes["Lua 5.4 runtimes (mlua), one per resource"]
       L1["resource A"]
       L2["resource B"]
     end
@@ -226,12 +255,19 @@ flowchart LR
 ```
 
 - **One port.** HTTP and WebSocket share TCP port `30120`.
+- **One thread.** A single-threaded tokio runtime drives the network, the tick loop and every Lua runtime.
 - **Two kinds of frames.** JSON text frames carry control messages and events. Binary frames carry packed entity
   state. The exact layout is in [docs/protocol.md](docs/protocol.md).
-- **One Lua runtime per resource.** Scripts run in a sandboxed Lua 5.3 VM (fengari, pure JavaScript). There is no
-  `io`, no `os.execute`, and no filesystem or native-code loading from scripts.
+- **One Lua runtime per resource.** Scripts run in a sandboxed Lua 5.4 state (the reference interpreter, embedded
+  with [mlua](https://github.com/mlua-rs/mlua)). There is no `io`, no `os.execute`, and no filesystem or native-code
+  loading from scripts. A watchdog stops a script that runs too long without yielding.
 - **Client scripts are real.** The headless client runs each resource's client scripts in its own Lua runtime, so
   both halves of a resource can be tested without a game.
+- **Four Rust crates.** `sixm-protocol` (wire format), `sixm-lua` (script runtime), `sixm-server` and `sixm-client`.
+
+**Why Rust.** An in-game client has to be native code that can be loaded next to the game, which the earlier Node.js
+implementation could not be. The port also made the Windows executables small (about 2 MB each instead of about 96 MB) and
+lets SixM embed the reference Lua 5.4 interpreter. The wire protocol did not change.
 
 More detail in [docs/architecture.md](docs/architecture.md).
 
@@ -279,7 +315,7 @@ same, so the mental model carries over. The game-facing parts do not exist yet.
 
 | In FiveM | In SixM | Notes |
 |---|---|---|
-| `fxmanifest.lua` | `manifest.lua` | `name`, `description`, `author`, `version`, `server_script(s)`, `client_script(s)`, `shared_script` |
+| `fxmanifest.lua` | `manifest.lua` | `name`, `description`, `author`, `version`, `server_script(s)`, `client_script(s)`, `shared_script(s)` |
 | `server.cfg`, `ensure` | `server.cfg`, `ensure` | Same idea. See [docs/configuration.md](docs/configuration.md) for what is supported |
 | `Citizen.CreateThread`, `Citizen.Wait`, `SetTimeout` | Same names | `CreateThread` and `Wait` aliases included |
 | `AddEventHandler`, `RegisterNetEvent`, `TriggerEvent` | Same names | |
@@ -291,7 +327,7 @@ same, so the mental model carries over. The game-facing parts do not exist yet.
 | OneSync | **No equivalent** | Only basic distance-based stream culling of player state |
 | State bags | **Not available** | On the roadmap |
 | ACL / `add_ace` | **Not available** | On the roadmap |
-| Lua 5.4, JavaScript, C# runtimes | **Lua 5.3 only** | Runs on fengari, a Lua 5.3 VM in JavaScript |
+| Lua 5.4, JavaScript, C# runtimes | **Lua 5.4 only** | Lua 5.4, as in FiveM. There is no JavaScript or C# runtime |
 | UDP (ENet) transport | **WebSocket over TCP** | UDP is on the roadmap |
 
 Existing FiveM resources will not run unmodified: anything that calls game natives, NUI or a framework that depends
@@ -300,8 +336,11 @@ on them has nothing to call into.
 ## Roadmap
 
 - [x] Dedicated server, resource system, net events, headless client
+- [x] Server and client core ported to Rust ([#5](https://github.com/CodingRule/SixM/issues/5))
+- [x] Watchdog for runaway scripts ([#8](https://github.com/CodingRule/SixM/issues/8))
+- [x] Linux release builds ([#11](https://github.com/CodingRule/SixM/issues/11))
 - [ ] In-game client through a Leonida runtime hook (**blocked upstream**: no playable game world yet). See [docs/game-integration.md](docs/game-integration.md)
-- [ ] UDP transport
+- [ ] UDP transport ([#6](https://github.com/CodingRule/SixM/issues/6))
 - [ ] Entity ownership and vehicles
 - [ ] Server-authoritative validation
 - [ ] State bags
@@ -310,7 +349,8 @@ on them has nothing to call into.
 - [ ] ACL / permissions
 - [ ] Web admin panel
 
-No dates. Items land when they work.
+No dates. Items land when they work. The roadmap is discussed in
+[#12](https://github.com/CodingRule/SixM/issues/12).
 
 ## Help wanted
 
@@ -360,27 +400,27 @@ Anything that calls game natives, NUI or a framework built on them has nothing t
 
 ### How do I host a SixM server?
 
-Download the [latest release](https://github.com/CodingRule/SixM/releases), run `sixm-server.exe`, and read
-[docs/hosting.md](docs/hosting.md).
+Download the [latest release](https://github.com/CodingRule/SixM/releases) for Windows or Linux, unpack it, run
+`sixm-server` (`sixm-server.exe` on Windows), and read [docs/hosting.md](docs/hosting.md). The server is one
+small executable (about 2.3 MB on Windows); there is no runtime to install.
 
 ## Project layout
 
 ```
 SixM/
-  bin/                  entry points: sixm-server.js, sixm-client.js
-  src/
-    server/             dedicated server
-    client/             headless client
-    shared/
-      protocol.js       wire protocol, shared by server and client
-      lua/              Lua runtime integration
+  Cargo.toml            Cargo workspace: version, shared dependencies, release profile
+  crates/
+    sixm-protocol/      wire protocol and command splitting, shared by server and client
+    sixm-lua/           sandboxed Lua 5.4 runtime: threads, events, commands, exports, watchdog
+    sixm-server/        dedicated server (library and the sixm-server binary)
+    sixm-client/        headless client (library and the sixm-client binary)
   resources/            resources, one folder each; [brackets] are category folders
-  scripts/              build tooling (build-exe.mjs)
-  test/                 tests, run with `npm test`
   docs/                 documentation
   assets/               logo and banner
   server.cfg            server configuration
 ```
+
+Tests sit next to the code (`crates/*/src` and `crates/*/tests`) and run with `cargo test --workspace`.
 
 ## Documentation
 
@@ -391,6 +431,7 @@ SixM/
 - [GTA VI integration: status and how to help](docs/game-integration.md)
 - [Wire protocol](docs/protocol.md)
 - [Architecture](docs/architecture.md)
+- [Release notes: v0.2.0](docs/releases/v0.2.0.md)
 
 ## Contributing
 

@@ -19,7 +19,7 @@ body:
         - server.cfg
         - HTTP endpoints
         - Protocol
-        - Standalone executables (build:exe)
+        - Release executables / build
         - Documentation
         - Other
     validations:
@@ -44,8 +44,8 @@ body:
       description: The smallest resource, server.cfg and commands that show the problem.
       placeholder: |
         1. server.cfg contains ...
-        2. npm start
-        3. npm run client -- --name Alice
+        2. sixm-server
+        3. sixm-client --name Alice
         4. ...
     validations:
       required: true
@@ -59,14 +59,16 @@ body:
     id: version
     attributes:
       label: SixM version or commit
-      placeholder: v0.1.0 or a commit hash
+      description: Output of `sixm-server --version`, or the commit you built.
+      placeholder: 0.2.0 or a commit hash
     validations:
       required: true
   - type: input
-    id: node
+    id: build
     attributes:
-      label: Node.js version
-      description: Output of `node --version`. Write "exe" if you are using the standalone executables.
+      label: How you got the executables
+      description: Write "release" if you downloaded a release archive. If you built from source, give the output of `rustc --version`.
+      placeholder: release, or rustc 1.80.0
     validations:
       required: true
   - type: input
