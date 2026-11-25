@@ -46,37 +46,50 @@ function print(...)
 end
 
 -------------------------------------------------------------------------------
--- Scheduler: a binary min-heap of sleeping coroutines keyed by (deadline, seq).
--- Parallel arrays keep a Wait() allocation-free.
+-- Scheduler. Sleeping coroutines are grouped into FIFO buckets by wake-up
+-- deadline, and a binary min-heap orders the distinct deadlines. Threads that
+-- wait from the same tick share a deadline, so the common Wait() is one table
+-- lookup and an append, and waking a whole bucket costs a single heap pop.
 -------------------------------------------------------------------------------
 
-local heapTime, heapSeq, heapCo, heapN = {}, {}, {}, 0
-local seq = 0.0        -- float: fengari integers are 32-bit and would wrap
-local tickNow = nil    -- the `now` of the tick in progress, if any
-local threads = {}     -- live coroutine -> { context = string, source = any }
+local buckets = {}        -- deadline -> { n = count, [1..n] = coroutine }
+local heap, heapN = {}, 0 -- min-heap of the deadlines that currently have a bucket
+local sleeping = 0        -- total coroutines across all buckets
+local tickNow = nil       -- the `now` of the tick in progress, if any
+local threads = {}        -- live coroutine -> { context = string, source = any }
 
--- The sift loops are written out inline (moving a hole instead of swapping,
--- no helper calls): this is the hottest code in the runtime.
-local function heapPush(deadline, co)
-  seq = seq + 1
+local function sleep(co, ms)
+  ms = tonumber(ms) or 0
+  if not (ms >= 0) then ms = 0 end -- also catches NaN
+  local deadline = (tickNow or bridge.now()) + ms
+  sleeping = sleeping + 1
+  local bucket = buckets[deadline]
+  if bucket then
+    local n = bucket.n + 1
+    bucket.n = n
+    bucket[n] = co
+    return
+  end
+  buckets[deadline] = { co, n = 1 }
+  -- New deadline: sift it up from the end of the heap.
   local i = heapN + 1
   heapN = i
   while i > 1 do
     local parent = i // 2
-    local parentTime = heapTime[parent]
-    -- A new entry has the highest seq, so on a tie the parent stays first.
-    if parentTime <= deadline then break end
-    heapTime[i], heapSeq[i], heapCo[i] = parentTime, heapSeq[parent], heapCo[parent]
+    local parentDeadline = heap[parent]
+    if parentDeadline <= deadline then break end
+    heap[i] = parentDeadline
     i = parent
   end
-  heapTime[i], heapSeq[i], heapCo[i] = deadline, seq, co
+  heap[i] = deadline
 end
 
-local function heapPop()
-  local first = heapCo[1]
+-- Removes the earliest deadline from the heap and returns its bucket.
+local function popBucket()
+  local deadline = heap[1]
   local n = heapN
-  local time, order, co = heapTime[n], heapSeq[n], heapCo[n]
-  heapTime[n], heapSeq[n], heapCo[n] = nil, nil, nil
+  local last = heap[n]
+  heap[n] = nil
   n = n - 1
   heapN = n
   if n > 0 then
@@ -85,27 +98,21 @@ local function heapPop()
     while true do
       local child = i * 2
       if child > n then break end
-      local childTime, childOrder = heapTime[child], heapSeq[child]
+      local childDeadline = heap[child]
       local right = child + 1
-      if right <= n then
-        local rightTime, rightOrder = heapTime[right], heapSeq[right]
-        if rightTime < childTime or (rightTime == childTime and rightOrder < childOrder) then
-          child, childTime, childOrder = right, rightTime, rightOrder
-        end
+      if right <= n and heap[right] < childDeadline then
+        child, childDeadline = right, heap[right]
       end
-      if time < childTime or (time == childTime and order < childOrder) then break end
-      heapTime[i], heapSeq[i], heapCo[i] = childTime, childOrder, heapCo[child]
+      if last <= childDeadline then break end
+      heap[i] = childDeadline
       i = child
     end
-    heapTime[i], heapSeq[i], heapCo[i] = time, order, co
+    heap[i] = last
   end
-  return first
-end
-
-local function sleep(co, ms)
-  ms = tonumber(ms) or 0
-  if ms < 0 then ms = 0 end
-  heapPush((tickNow or bridge.now()) + ms, co)
+  local bucket = buckets[deadline]
+  buckets[deadline] = nil
+  sleeping = sleeping - bucket.n
+  return bucket
 end
 
 -- Handles the outcome of a coroutine.resume: returns `false, traceback` when
@@ -198,30 +205,33 @@ end
 Citizen = { CreateThread = CreateThread, Wait = Wait, SetTimeout = SetTimeout }
 
 function internal.tick(now)
-  if heapN == 0 or heapTime[1] > now then return end
-  -- Collect first, run second: a thread that calls Wait(0) while running
-  -- lands back in the heap and is picked up by the *next* tick.
-  local due, n = {}, 0
-  while heapN > 0 and heapTime[1] <= now do
-    n = n + 1
-    due[n] = heapPop()
+  if heapN == 0 or heap[1] > now then return end
+  -- Detach every due bucket first, run second: a thread that calls Wait(0)
+  -- while running lands in a fresh bucket and is picked up by the *next* tick.
+  local due, dueN = {}, 0
+  while heapN > 0 and heap[1] <= now do
+    dueN = dueN + 1
+    due[dueN] = popBucket()
   end
   local previousNow, outerSource = tickNow, rawget(G, 'source')
   tickNow = now
   -- Same outcome handling as resume/settle/run, written out flat: every Lua
   -- call saved here is paid back once per sleeping thread per wake-up.
-  for i = 1, n do
-    local co = due[i]
-    local info = threads[co]
-    rawset(G, 'source', info.source)
-    local ok, value = co_resume(co)
-    if not ok then
-      threads[co] = nil
-      bridge.report(traceback(co, tostring(value)), info.context)
-    elseif co_status(co) == 'suspended' then
-      sleep(co, value)
-    else
-      threads[co] = nil
+  for b = 1, dueN do
+    local bucket = due[b]
+    for i = 1, bucket.n do
+      local co = bucket[i]
+      local info = threads[co]
+      rawset(G, 'source', info.source)
+      local ok, value = co_resume(co)
+      if not ok then
+        threads[co] = nil
+        bridge.report(traceback(co, tostring(value)), info.context)
+      elseif co_status(co) == 'suspended' then
+        sleep(co, value)
+      else
+        threads[co] = nil
+      end
     end
   end
   rawset(G, 'source', outerSource)
@@ -229,7 +239,7 @@ function internal.tick(now)
 end
 
 function internal.pending()
-  return heapN
+  return sleeping
 end
 
 function internal.invoke(fn, context, ...)

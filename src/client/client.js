@@ -136,7 +136,7 @@ export class SixMClient extends EventEmitter {
   executeCommand(raw) {
     const parts = splitCommand(raw);
     if (!parts.length) return;
-    const name = parts[0].toLowerCase();
+    const name = parts[0];
     for (const rt of this.runtimes.values()) {
       if (rt.hasCommand(name)) {
         rt.runCommand(name, this.id, parts.slice(1), raw);

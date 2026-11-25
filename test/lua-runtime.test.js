@@ -58,10 +58,12 @@ test('marshaling: unicode strings and raw bytes', () => {
   run(env, `
     log(text, #text)
     log(echo('añb€'), #blob, blob:byte(1), blob:byte(2), blob:byte(3))
+    log(type(echo('\\xff\\xfe not utf-8')), #echo('\\xff'))
   `);
   assert.deepEqual(env.logged, [
     [text, Buffer.byteLength(text, 'utf8')],
     ['añb€', 3, 0, 255, 65],
+    ['string', 3], // invalid UTF-8 is decoded leniently (U+FFFD) instead of throwing
   ]);
 });
 
@@ -353,6 +355,42 @@ test('stress: 2,000 waiting threads finish quickly', () => {
   for (let i = 0; i < 20000; i++) env.rt.tick(1000 + i);
   const idleMs = Number(process.hrtime.bigint() - idleStart) / 1e6;
   assert.ok(idleMs < 2000, `20,000 idle ticks took ${idleMs.toFixed(0)}ms`);
+});
+
+test('threads: Wait inside pcall, and JS globals re-entering the runtime mid-thread', () => {
+  const env = make();
+  env.rt.registerGlobal('emit', (name, ...args) => env.rt.triggerEvent(name, args, 99));
+  env.rt.registerGlobal('callBack', (fn) => fn(21));
+  run(env, `
+    AddEventHandler('inner', function(x) log('inner', x, source) ; Wait(5) ; log('inner done') end)
+    CreateThread(function()
+      Wait(1)
+      log(emit('inner', 'v'))
+      log(callBack(function(n) return n * 2 end))
+      local ok, err = pcall(function() Wait(2) ; error('after wait', 0) end)
+      log(ok, err, source == nil)
+    end)
+  `);
+  env.rt.tick(1);
+  assert.deepEqual(env.logged, [['inner', 'v', 99], 1, 42]);
+  env.rt.tick(3);
+  assert.deepEqual(env.logged[3], [false, 'after wait', true]);
+  env.rt.tick(6);
+  assert.equal(env.logged[4], 'inner done');
+  assert.equal(env.rt.pendingThreads, 0);
+});
+
+test('threads: odd Wait arguments are treated as 0', () => {
+  const env = make();
+  run(env, `
+    CreateThread(function() Wait() ; Wait(-5) ; Wait(0/0) ; Wait('3') ; log('done') end)
+  `);
+  for (let now = 0; now < 3; now++) env.rt.tick(0);
+  assert.deepEqual(env.logged, []);
+  env.rt.tick(2);
+  assert.deepEqual(env.logged, []);
+  env.rt.tick(3);
+  assert.deepEqual(env.logged, ['done']);
 });
 
 // ---------------------------------------------------------------------- events

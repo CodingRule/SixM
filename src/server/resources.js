@@ -196,9 +196,10 @@ export class ResourceManager {
   executeCommand(raw, source = 0) {
     const parts = splitCommand(raw);
     if (!parts.length) return false;
-    const name = parts[0].toLowerCase();
     const args = parts.slice(1);
 
+    // Resource commands are matched exactly as registered; console built-ins ignore case.
+    const name = parts[0];
     for (const r of this.running.values()) {
       if (!r.runtime.hasCommand(name)) continue;
       if (source !== 0 && r.runtime.isCommandRestricted?.(name)) {
@@ -209,7 +210,7 @@ export class ResourceManager {
       return true;
     }
     if (source === 0) {
-      const builtin = this.builtins.get(name);
+      const builtin = this.builtins.get(name.toLowerCase());
       if (builtin) {
         builtin.run(args, raw, source);
         return true;

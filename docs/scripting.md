@@ -174,7 +174,7 @@ are currently streamed to it.
 | `RegisterCommand(name, fn, restricted)` | S C | Register a command. `fn` receives `(source, args, raw)` |
 | `ExecuteCommand(str)` | S C | Run a command line as if it had been typed |
 
-`args` is a list of the words after the command name; `raw` is the full command line.
+`args` is a list of the words after the command name; `raw` is the full command line. Command names are case-sensitive.
 
 A server command registered with `restricted` set to `true` can only be run from the server console. With `false`,
 connected players can run it too, and `source` is their player id (`0` for the console). A command typed in a client
@@ -263,3 +263,10 @@ Scripts run in a Lua 5.3 VM implemented in JavaScript (fengari). They are sandbo
 - no loading of native code
 
 A resource talks to the outside world only through the API on this page.
+
+## Limits to know about
+
+- A script that loops without calling `Wait` blocks the whole server: there is no watchdog yet.
+- Integers are 32-bit. Larger whole numbers coming from the host arrive as floats.
+- `Wait` only works in threads, event handlers, commands and exports, not inside a coroutine a script creates itself.
+- An export or callback that calls `Wait` returns nothing to its caller.
