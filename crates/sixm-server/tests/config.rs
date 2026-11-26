@@ -106,6 +106,7 @@ sv_hostname "Leonida Nights"
 sv_maxclients 48
 set sv_tickrate 30
 set sv_streamdistance 350.5
+sv_proxies "127.0.0.1, 10.0.0.5"
 sets tags "roleplay, eu ,, drift"
 sets locale en-GB
 setr voice_enabled true
@@ -130,6 +131,7 @@ frobnicate 1 2
             max_players: Some(48),
             tick_rate: Some(30),
             stream_distance: Some(350.5),
+            trusted_proxies: Some(vec!["127.0.0.1".parse().unwrap(), "10.0.0.5".parse().unwrap()]),
             tags: Some(vec![
                 "roleplay".to_string(),
                 "eu".to_string(),
@@ -148,7 +150,7 @@ frobnicate 1 2
     assert_eq!(cfg.convars["sv_hostname"], "Leonida Nights");
     assert_eq!(cfg.convars["locale"], "en-GB");
     assert_eq!(cfg.replicated, ["voice_enabled"]);
-    assert_eq!(cfg.unknown, [cmd("frobnicate", &["1", "2"], 17)]);
+    assert_eq!(cfg.unknown, [cmd("frobnicate", &["1", "2"], 18)]);
     assert!(
         !cfg.info_vars.contains_key("mysql_string"),
         "private convars are not public"
