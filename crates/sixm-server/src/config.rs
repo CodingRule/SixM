@@ -45,6 +45,8 @@ pub struct Settings {
     pub host: Option<String>,
     pub tick_rate: Option<u32>,
     pub stream_distance: Option<f32>,
+    /// Proxies whose `X-Forwarded-For` is believed, by address.
+    pub trusted_proxies: Option<Vec<std::net::IpAddr>>,
     pub tags: Option<Vec<String>>,
 }
 
@@ -249,6 +251,17 @@ fn apply_setting(settings: &mut Settings, key: &str, value: &str) -> Option<Resu
                 "sv_streamdistance must be a number (got \"{value}\")"
             )),
         },
+        "sv_proxies" => {
+            let mut proxies = Vec::new();
+            for part in value.split([',', ' ']).filter(|p| !p.trim().is_empty()) {
+                match part.trim().parse::<std::net::IpAddr>() {
+                    Ok(ip) => proxies.push(ip),
+                    Err(_) => return Some(Err(format!("sv_proxies must be IP addresses (got \"{}\")", part.trim()))),
+                }
+            }
+            settings.trusted_proxies = Some(proxies);
+            Ok(())
+        }
         _ => return None,
     };
     Some(result)
@@ -263,6 +276,7 @@ fn is_setting_convar(key: &str) -> bool {
             | "sv_host"
             | "sv_tickrate"
             | "sv_streamdistance"
+            | "sv_proxies"
     )
 }
 

@@ -40,6 +40,7 @@ If there is no configuration file, the server logs a warning, uses the defaults 
 | `endpoint_add_tcp` | `endpoint_add_tcp "0.0.0.0:30120"` | `0.0.0.0:30120` | Address and port to listen on. Also accepts a port alone, or `[v6-address]:port` |
 | `sv_tickrate` | `sv_tickrate 20` | `20` | Ticks per second, 1 to 240: how often snapshots are sent and sleeping script threads are woken |
 | `sv_streamdistance` | `sv_streamdistance 500` | `500` | Players further apart than this are not sent to each other. `0` or less means no limit |
+| `sv_proxies` | `sv_proxies "127.0.0.1, 10.0.0.5"` | none | Reverse proxies whose `X-Forwarded-For` is believed. The header from any other peer is ignored |
 | `ensure` | `ensure hello` | | Start the resource named `hello`. `start` means the same |
 | `stop` | `stop hello` | | Take a resource back off the start list |
 | `set` | `set mykey value` | | Set a convar |

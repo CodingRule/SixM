@@ -191,9 +191,21 @@ impl Client {
     }
 
     async fn connect_to(port: u16, path: &str) -> Client {
+        Client::connect_with(port, path, &[]).await
+    }
+
+    /// A client whose upgrade request carries extra headers, the way a proxy forwards one.
+    async fn connect_with(port: u16, path: &str, headers: &[(&str, &str)]) -> Client {
+        use tokio_tungstenite::tungstenite::client::IntoClientRequest;
         let stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-        let url = format!("ws://127.0.0.1:{port}{path}");
-        let (mut ws, _) = tokio_tungstenite::client_async(url, stream).await.unwrap();
+        let mut request = format!("ws://127.0.0.1:{port}{path}").into_client_request().unwrap();
+        for (name, value) in headers {
+            request.headers_mut().insert(
+                tokio_tungstenite::tungstenite::http::HeaderName::from_bytes(name.as_bytes()).unwrap(),
+                value.parse().unwrap(),
+            );
+        }
+        let (mut ws, _) = tokio_tungstenite::client_async(request, stream).await.unwrap();
         let (commands, mut rx) = mpsc::unbounded_channel();
         let received = Rc::new(Received::default());
         let seen = received.clone();
@@ -232,7 +244,11 @@ impl Client {
 
     /// Connect, say hello and wait for the WELCOME.
     async fn join(port: u16, name: &str) -> Client {
-        let mut client = Client::connect(port).await;
+        Client::join_with(port, name, &[]).await
+    }
+
+    async fn join_with(port: u16, name: &str, headers: &[(&str, &str)]) -> Client {
+        let mut client = Client::connect_with(port, "/", headers).await;
         client.hello(name);
         client.welcome = client.next("welcome").await;
         client.id = client.welcome["id"].as_u64().unwrap() as u16;
@@ -1115,6 +1131,53 @@ fn state_flood_is_dropped_silently_not_kicked() {
 }
 
 // ----------------------------------------------------------- player_connecting
+
+#[test]
+fn a_trusted_proxy_hands_over_the_client_address_from_x_forwarded_for() {
+    run(async {
+        let (server, port) = start(ServerOptions {
+            trusted_proxies: vec!["127.0.0.1".parse().unwrap()],
+            ..options()
+        })
+        .await;
+        let recorder = Recorder::install(&server);
+        let _client = Client::join_with(port, "Via Proxy", &[("x-forwarded-for", "203.0.113.9")]).await;
+
+        let seen = recorder.connecting.borrow();
+        assert!(seen[0].endpoint.starts_with("203.0.113.9:"), "endpoint was {}", seen[0].endpoint);
+        assert_eq!(seen[0].identifiers, ["ip:203.0.113.9"]);
+    });
+}
+
+#[test]
+fn an_untrusted_peer_cannot_forge_x_forwarded_for() {
+    run(async {
+        let (server, port) = start(options()).await;
+        let recorder = Recorder::install(&server);
+        let _client = Client::join_with(port, "Forger", &[("x-forwarded-for", "203.0.113.9")]).await;
+
+        let seen = recorder.connecting.borrow();
+        assert!(seen[0].endpoint.starts_with("127.0.0.1:"));
+        assert_eq!(seen[0].identifiers, ["ip:127.0.0.1"]);
+    });
+}
+
+#[test]
+fn a_chain_of_two_proxies_yields_the_address_before_the_trusted_ones() {
+    run(async {
+        let (server, port) = start(ServerOptions {
+            trusted_proxies: vec!["127.0.0.1".parse().unwrap(), "10.0.0.5".parse().unwrap()],
+            ..options()
+        })
+        .await;
+        let recorder = Recorder::install(&server);
+        let _client = Client::join_with(port, "Behind Two", &[("x-forwarded-for", "198.51.100.7, 10.0.0.5")]).await;
+
+        let seen = recorder.connecting.borrow();
+        assert!(seen[0].endpoint.starts_with("198.51.100.7:"), "endpoint was {}", seen[0].endpoint);
+        assert_eq!(seen[0].identifiers, ["ip:198.51.100.7"]);
+    });
+}
 
 #[test]
 fn player_connecting_synchronous_reject() {
