@@ -77,6 +77,8 @@ pub struct ServerOptions {
     pub tick_rate: u32,
     /// Players further apart than this do not see each other; `<= 0` means unlimited.
     pub stream_distance: f32,
+    /// Proxies whose `X-Forwarded-For` is believed, by address.
+    pub trusted_proxies: Vec<std::net::IpAddr>,
     /// Version string shown in `/info.json` and on the status page.
     pub build: String,
     pub tags: Vec<String>,
@@ -115,6 +117,7 @@ impl Default for ServerOptions {
             max_players: 32,
             tick_rate: 20,
             stream_distance: 500.0,
+            trusted_proxies: Vec::new(),
             build: env!("CARGO_PKG_VERSION").to_string(),
             tags: Vec::new(),
             vars: BTreeMap::new(),
@@ -224,6 +227,7 @@ impl Server {
                 max_players: options.max_players,
                 tick_rate: options.tick_rate,
                 stream_distance: options.stream_distance,
+                trusted_proxies: options.trusted_proxies,
                 build: options.build,
                 tags: options.tags,
                 limits,
@@ -665,6 +669,7 @@ struct Inner {
     max_players: u32,
     tick_rate: u32,
     stream_distance: f32,
+    trusted_proxies: Vec<std::net::IpAddr>,
     build: String,
     tags: Vec<String>,
     limits: Limits,
@@ -1496,7 +1501,7 @@ impl Inner {
         };
 
         // An IPv4 client on a dual-stack socket shows up as ::ffff:a.b.c.d.
-        let ip = remote.ip().to_canonical();
+        let ip = client_ip(remote.ip().to_canonical(), headers, &self.trusted_proxies);
         let endpoint = SocketAddr::new(ip, remote.port()).to_string();
         let (tx, rx) = mpsc::unbounded_channel();
         let conn = {
@@ -1725,6 +1730,49 @@ fn json_response(status: StatusCode, body: &impl Serialize) -> HttpResponse {
         HeaderValue::from_static("*"),
     );
     res
+}
+
+/// The client's address: its own, or the right-most address in `X-Forwarded-For`
+/// that is not one of our proxies when the peer itself is one. The header from any
+/// other peer is forged by definition and ignored.
+///
+/// Every `X-Forwarded-For` line counts, in order: a proxy may add a line of its own
+/// instead of appending to the client's, and the client's line comes first. The walk
+/// stops at the first hop that is not an address and falls back to the peer, because
+/// everything to the left of it is only as trustworthy as that hop.
+fn client_ip(
+    peer: std::net::IpAddr,
+    headers: &hyper::HeaderMap,
+    trusted: &[std::net::IpAddr],
+) -> std::net::IpAddr {
+    if !trusted.contains(&peer) {
+        return peer;
+    }
+    let mut hops = Vec::new();
+    for line in headers.get_all("x-forwarded-for") {
+        let Ok(line) = line.to_str() else {
+            return peer;
+        };
+        hops.extend(line.split(',').map(str::trim).filter(|hop| !hop.is_empty()));
+    }
+    for hop in hops.into_iter().rev() {
+        let Some(ip) = forwarded_hop(hop) else {
+            return peer;
+        };
+        if !trusted.contains(&ip) {
+            return ip;
+        }
+    }
+    peer
+}
+
+/// One `X-Forwarded-For` entry as an address. Some proxies add the port
+/// (`203.0.113.9:51234`, `[2001:db8::1]:51234`), which is dropped.
+fn forwarded_hop(hop: &str) -> Option<std::net::IpAddr> {
+    hop.parse::<std::net::IpAddr>()
+        .or_else(|_| hop.parse::<SocketAddr>().map(|addr| addr.ip()))
+        .ok()
+        .map(|ip| ip.to_canonical())
 }
 
 /// An upgrade request is refused with a bare status and the connection closed.

@@ -122,9 +122,20 @@ Players then connect with `--secure` on the proxy's port:
 .\sixm-client.exe --host play.example.com --port 443 --secure --name Alice
 ```
 
-Behind a proxy the server sees every player coming from the proxy's address, because it does not read
-`X-Forwarded-For` ([#10](https://github.com/CodingRule/SixM/issues/10)). `GetPlayerEndpoint` and the `ip:`
-identifier are therefore the same for everyone.
+Behind a proxy the server would otherwise see every player coming from the proxy's address. Name the proxy
+addresses in `server.cfg` and the server believes `X-Forwarded-For` from them, and nobody else:
+
+```
+sv_proxies "127.0.0.1, 10.0.0.5"
+```
+
+The client address is the right-most one in the header that is not itself a listed proxy, so a chain of two
+proxies works. `GetPlayerEndpoint` and the `ip:` identifier then show the player, not the proxy.
+
+Entries are single addresses, not ranges. A proxy that adds its own `X-Forwarded-For` line instead of appending
+to the client's is read correctly, and so is an entry with a port (`203.0.113.9:51234`). If the entry a proxy
+added is not an address at all, the server stops there and uses the proxy's address, rather than believe
+whatever the client wrote before it.
 
 ## Run it as a service on Linux
 

@@ -83,6 +83,9 @@ impl App {
                 if let Some(v) = s.stream_distance {
                     server_options.stream_distance = v;
                 }
+                if let Some(v) = s.trusted_proxies {
+                    server_options.trusted_proxies = v;
+                }
                 if let Some(v) = s.tags {
                     server_options.tags = v;
                 }
