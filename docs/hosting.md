@@ -132,6 +132,11 @@ sv_proxies "127.0.0.1, 10.0.0.5"
 The client address is the right-most one in the header that is not itself a listed proxy, so a chain of two
 proxies works. `GetPlayerEndpoint` and the `ip:` identifier then show the player, not the proxy.
 
+Entries are single addresses, not ranges. A proxy that adds its own `X-Forwarded-For` line instead of appending
+to the client's is read correctly, and so is an entry with a port (`203.0.113.9:51234`). If the entry a proxy
+added is not an address at all, the server stops there and uses the proxy's address, rather than believe
+whatever the client wrote before it.
+
 ## Run it as a service on Linux
 
 A systemd unit, assuming the release archive was unpacked into `/opt/sixm` (so that `/opt/sixm/sixm-server`,

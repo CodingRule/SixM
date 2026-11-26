@@ -131,7 +131,10 @@ frobnicate 1 2
             max_players: Some(48),
             tick_rate: Some(30),
             stream_distance: Some(350.5),
-            trusted_proxies: Some(vec!["127.0.0.1".parse().unwrap(), "10.0.0.5".parse().unwrap()]),
+            trusted_proxies: Some(vec![
+                "127.0.0.1".parse().unwrap(),
+                "10.0.0.5".parse().unwrap()
+            ]),
             tags: Some(vec![
                 "roleplay".to_string(),
                 "eu".to_string(),

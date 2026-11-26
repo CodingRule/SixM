@@ -256,7 +256,12 @@ fn apply_setting(settings: &mut Settings, key: &str, value: &str) -> Option<Resu
             for part in value.split([',', ' ']).filter(|p| !p.trim().is_empty()) {
                 match part.trim().parse::<std::net::IpAddr>() {
                     Ok(ip) => proxies.push(ip),
-                    Err(_) => return Some(Err(format!("sv_proxies must be IP addresses (got \"{}\")", part.trim()))),
+                    Err(_) => {
+                        return Some(Err(format!(
+                            "sv_proxies must be IP addresses (got \"{}\")",
+                            part.trim()
+                        )))
+                    }
                 }
             }
             settings.trusted_proxies = Some(proxies);
